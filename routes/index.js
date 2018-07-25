@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/user')
 
-router.post('/register', User.validate, async (req, res, next) => {
+router.post('/register', async (req, res, next) => {
   try {
     req.session.user = await User.create(req.body);
     return res.status(200).json({ user: req.session.user });

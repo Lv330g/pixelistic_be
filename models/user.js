@@ -53,6 +53,11 @@ UserSchema.statics.authenticate = async (req, res, next) => {
     }
 }
 
+UserSchema.statics.isUserInDB = async (email, nickname) => {
+   let res = await User.find( { $or: [ { email: email }, { nickname: nickname } ] } );
+   return res.length;
+}
+
 UserSchema.statics.validate = (req, res, next) => {
   req.checkBody('nickname', 'Name is required').notEmpty();
   req.checkBody('email', 'Name is required').notEmpty()
