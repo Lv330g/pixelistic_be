@@ -40,7 +40,6 @@ app.use(expressValidator());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
@@ -54,5 +53,7 @@ app.use((err, req, res, next) => {
   res.locals.error = req.app.get('env') === 'development' ? err : {};
   res.status(err.status || 500).json({ error: err.message });
 });
+
+
 
 module.exports = app;
