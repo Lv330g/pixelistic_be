@@ -1,34 +1,32 @@
-const express = require("express");
-const User = require("../models/user");
-const bcrypt = require("bcrypt");
+const express = require('express');
+const User = require('../models/user');
+const bcrypt = require('bcrypt');
 
 const router = express.Router();
 const nodemailer = require("nodemailer");
 
 let newUser, rand;
 
-router.post("/register", User.validate, async (req, res, next) => {
+router.post('/register',User.validate, async (req, res, next) => {
   if (await User.isUserInDB(req.body.email, req.body.nickname)) {
-    const err = new Error("User exists");
+    const err = new Error('User exists');
     err.status = 422;
     next(err);
   }
   confirmEmail(req.body.email);
   newUser = req.body;
-  return res.status(200).json({
-    text: `Email has been sent. Please check the inbox`
-  });
+  return res.status(200).json({text: `Email has been sent. Please check the inbox`});
 });
 
-router.post("/login", User.authenticate, (req, res) => {
+router.post('/login', User.authenticate, (req, res) => {
   res.status(200).json({
-    user: req.session.user
+    user: req.session.user,
   });
 });
 
-router.get("/logout", (req, res, next) => {
+router.get('/logout', (req, res, next) => {
   if (req.session) {
-    req.session.destroy(err => {
+    req.session.destroy((err) => {
       if (err) return next(err);
     });
   }
@@ -41,10 +39,10 @@ router.get("/logout", (req, res, next) => {
  */
 function confirmEmail(email) {
   const smtpTransport = nodemailer.createTransport({
-    service: "Gmail",
+    service: 'Gmail',
     auth: {
-      user: "together0chat@gmail.com",
-      pass: "qweasdzxc0"
+      user: 'together0chat@gmail.com',
+      pass: 'qweasdzxc0',
     }
   });
   bcrypt.hash(email, 10, (err, hash) => {
@@ -55,11 +53,11 @@ function confirmEmail(email) {
     let link = `http://127.0.0.1:8080/verify?hash=${rand}`;
     let mailOptions = {
       to: email,
-      subject: "Please confirm your Email account",
-      html: `Hello,<br> Please Click on the link to verify your email.<br><a href=${link}>Click here to verify</a>`
+      subject: 'Please confirm your Email account',
+      html: `Hello,<br> Please Click on the link to verify your email.<br><a href=${link}>Click here to verify</a>`,
     };
     smtpTransport.sendMail(mailOptions);
-  });
+  })
 }
 
 router.get('/verify', async (req, res, next) => {
@@ -67,13 +65,14 @@ router.get('/verify', async (req, res, next) => {
     try {
       req.session.user = await User.create(newUser);
       return res.status(200).json({
-        user: req.session.user
+        user: req.session.user,
       });
     } catch (err) {
       err.status = 422;
     }
-  } else {
-    let error = new Error("Verification failed: hashes do not matched");
+  }
+  else{
+    let error = new Error('Verification failed: hashes do not matched');
     error.status = 422;
     next(error);
   }
