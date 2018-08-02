@@ -1,43 +1,20 @@
 const express = require('express');
 const User = require('../models/user');
 const bcrypt = require('bcrypt');
-
+const jwt  = require('jsonwebtoken');
 const router = express.Router();
 const nodemailer = require("nodemailer");
+const expressJwt = require('express-jwt');  
+const authenticate = expressJwt({secret : 'server secret'});
 
 let newUser, rand;
 
-router.post('/register',User.validate, async (req, res, next) => {
-  if (await User.isUserInDB(req.body.email, req.body.nickname)) {
-    const err = new Error('User exists');
-    err.status = 422;
-    next(err);
-  }
-  confirmEmail(req.body.email);
-  newUser = req.body;
-  return res.status(200).json({text: `Email has been sent. Please check the inbox`});
-});
+const prepareUser = (user) => {
+  const {_id, nickname, email, isAdmin} = user;
+  return {_id, nickname, email, isAdmin};
+}
 
-router.post('/login', User.authenticate, (req, res) => {
-  res.status(200).json({
-    user: req.session.user,
-  });
-});
-
-router.get('/logout', (req, res, next) => {
-  if (req.session) {
-    req.session.destroy((err) => {
-      if (err) return next(err);
-    });
-  }
-});
-
-/**
- * Function sends an email to confirm the user's email address
- *
- * @param {String} email
- */
-function confirmEmail(email) {
+const confirmEmail = (email) => {
   const smtpTransport = nodemailer.createTransport({
     service: 'Gmail',
     auth: {
@@ -60,22 +37,54 @@ function confirmEmail(email) {
   })
 }
 
+router.post('/register',User.validate, async (req, res, next) => {
+  if (await User.isUserInDB(req.body.email, req.body.nickname)) {
+    const err = new Error('User exists');
+    err.status = 422;
+    next(err);
+  }
+  confirmEmail(req.body.email);
+  newUser = req.body;
+  return res.status(200).json({text: `Email has been sent. Please check the inbox`});
+});
+
+router.post('/login', User.authenticate, (req, res) => {
+  req.token = jwt.sign( prepareUser( req.session.user) , 'server secret', { expiresIn: '2h'});
+  res.status(200).json({user: req.session.user, accessToken: req.token});
+});
+
+router.get('/validate-token', authenticate, (req, res) => {
+  res.status(200).json({ user: req.user });
+});
+
+router.get('/logout', (req, res, next) => {
+  if (req.session) {
+    req.session.destroy((err) => {
+      if (err) return next(err);
+    });
+  }
+});
+
 router.get('/verify', async (req, res, next) => {
   if (req.query.hash === rand) {
     try {
       req.session.user = await User.create(newUser);
-      return res.status(200).json({
-        user: req.session.user,
-      });
-    } catch (err) {
+      rand = null;
+      return res.status(200).json({ user: prepareUser(req.session.user) });
+    } 
+    catch (err) {
       err.status = 422;
+      next(err);
     }
   }
   else{
-    let error = new Error('Verification failed: hashes do not matched');
-    error.status = 422;
-    next(error);
+      let error = new Error('Verification failed');
+      error.status = 422;
+      next(error);
   }
 });
+
+
+
 
 module.exports = router;
