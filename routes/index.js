@@ -17,7 +17,7 @@ const prepareUser = ({_id, nickname, email, isAdmin}) => {
  *
  * @param {String} email
  */
-function confirmEmail(email) {
+const confirmEmail = (email) => {
   const smtpTransport = nodemailer.createTransport({
     service: 'Gmail',
     auth: {
@@ -87,37 +87,5 @@ router.get('/verify', async (req, res, next) => {
       next(error);
   }
 });
-
-
-
-
-router.post('/register',User.validate, async (req, res, next) => {
-  if (await User.isUserInDB(req.body.email, req.body.nickname)) {
-    const err = new Error('User exists');
-    err.status = 422;
-    next(err);
-  }
-  confirmEmail(req.body.email);
-  newUser = req.body;
-  return res.status(200).json({text: `Email has been sent. Please check the inbox`});
-});
-
-router.post('/login', User.authenticate, (req, res) => {
-  req.token = jwt.sign( req.session.user.toObject() , 'server secret', { expiresIn: '2h' });
-  res.status(200).json({ user: prepareUser(req.session.user), accessToken: req.token});
-});
-
-router.get('/logout', (req, res, next) => {
-  if (req.session) {
-    req.session.destroy((err) => {
-      if (err) return next(err);
-    });
-  }
-});
-
-router.post('/validate-token', authenticate, (req, res) => {
-  res.status(200).json({ user: prepareUser(req.user) });
-});
-
 
 module.exports = router;
