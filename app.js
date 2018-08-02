@@ -12,6 +12,7 @@ const cors = require('cors')
 const indexRouter = require('./routes/index');
 
 const app = express();
+
 //mongoose connection
 mongoose.connect ('mongodb://admin:Admin1234@ds245661.mlab.com:45661/pixelapp');
 const db = mongoose.connection;
@@ -56,4 +57,4 @@ app.use((err, req, res, next) => {
 
 
 
-module.exports = app;
+module.exports = { app, db };
