@@ -108,4 +108,9 @@ router.get("/verify", (req, res, next) => {
   });
 });
 
+router.post("/search", async (req, res) => {
+  let users = await User.find({}).select('nickname -_id')
+  res.status(200).send(users)
+});
+
 module.exports = router;
