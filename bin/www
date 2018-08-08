@@ -3,8 +3,9 @@
 /**
  * Module dependencies.
  */
+const mongoose = require('mongoose');
 
-const app = require('../app');
+const { app, db } = require('../app');
 const debug = require('debug')('nodetemplate:server');
 const http = require('http');
 
@@ -21,6 +22,37 @@ app.set('port', port);
 
 const server = http.createServer(app);
 
+const io = require('socket.io').listen(server);
+io.on('connection', (socket) => {
+  const chat = db.collection('chats');
+
+  const findMessages = () => {
+    chat.find().sort({ _id: -1 }).limit(20).toArray((err, result) => {
+      if (err) {
+        throw err;
+      }
+
+      socket.emit('gettingMessages', result.reverse());
+    });
+  }
+
+  socket.on('needMessages', () => {
+    findMessages();
+  })
+
+  socket.on('message sent', (data) => {
+    const { author } = data;
+    const { msg } = data;
+
+    chat.insert({ author, msg }, () => {
+      findMessages();
+    });
+  });
+
+  socket.on('typing', (name) => {
+    socket.broadcast.emit('someone-typing', name);
+  });
+});
 /**
  * Listen on provided port, on all network interfaces.
  */
