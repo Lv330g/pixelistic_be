@@ -4,6 +4,7 @@
  * Module dependencies.
  */
 const mongoose = require('mongoose');
+const User = require('../models/user');
 
 const { app, db } = require('../app');
 const debug = require('debug')('nodetemplate:server');
@@ -24,16 +25,48 @@ const server = http.createServer(app);
 
 const io = require('socket.io').listen(server);
 io.on('connection', (socket) => {
-  const chat = db.collection('chats');
+  const chat = db.collection('chat');
+  const users = db.collection('users');
 
-  socket.on('needMessages', () => {
+  socket.on('needFriends', async (id) => {
+    const currentUser = await User.findOne({_id: id});
+    const friends = currentUser.friends;
+    const friendsIds = friends.map(item => item.id);
+    const friendsArr = await User.find({ _id: { $in: friendsIds } });
+    const mappedFriends = friendsArr.map((item, i) => {
+      return {
+        _id: item._id,
+        nickname: item.nickname,
+        avatar: item.avatar,
+        status: item.status,
+        newMessages: item.newMessages,
+        favorite: friends[i].favorite,
+      }
+    });
+    socket.emit('gettingFriends', mappedFriends);
+  });
+
+  socket.on('manageFavorites', async (data) => {
+    const { current, friend, checked } = data;
+    await User.update(
+      {'_id': current, 'friends.id': friend},
+      {$set: {'friends.$.favorite': checked}}
+    );
+    socket.emit('favoritesManaged');
+  });
+
+  const findMessages = () => {
     chat.find().sort({ _id: -1 }).limit(20).toArray((err, result) => {
       if (err) {
         throw err;
       }
 
-      socket.emit('gettingMessages', result);
+      socket.emit('gettingMessages', result.reverse());
     });
+  }
+
+  socket.on('needMessages', () => {
+    findMessages();
   })
 
   socket.on('message sent', (data) => {
@@ -41,13 +74,7 @@ io.on('connection', (socket) => {
     const { msg } = data;
 
     chat.insert({ author, msg }, () => {
-      chat.find().sort({ _id: -1 }).limit(20).toArray((err, result) => {
-        if (err) {
-          throw err;
-        }
-  
-        io.emit('gettingMessages', result);
-      });
+      findMessages();
     });
   });
 

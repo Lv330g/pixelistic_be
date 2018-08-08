@@ -8,9 +8,9 @@ const nodemailer = require("nodemailer");
 const expressJwt = require("express-jwt");
 const authenticate = expressJwt({ secret: "server secret" });
 
-const prepareUser = ({ _id, nickname, email, isAdmin }) => {
-  return { _id, nickname, email, isAdmin };
-};
+const prepareUser = ({_id, nickname, email, isAdmin, avatar}) => {
+  return {_id, nickname, email, isAdmin, avatar};
+}
 /**
  * Function sends an email to confirm the user's email address
  *
@@ -65,12 +65,14 @@ router.post("/register", User.validate, async (req, res, next) => {
     .json({ text: `Email has been sent. Please check the inbox` });
 });
 
-router.post("/login", User.authenticate, (req, res) => {
-  req.token = jwt.sign(prepareUser(req.session.user), "server secret", {
-    expiresIn: "2h"
-  });
-  res.status(200).json({ user: req.session.user, accessToken: req.token });
-});
+const authUser = (req, res) => {
+  req.token = jwt.sign(prepareUser(req.session.user), 'server secret', { expiresIn: '2h'});
+  res.status(200).json({user: prepareUser(req.session.user), accessToken: req.token});
+}
+
+router.post('/login', User.authenticate, authUser);
+
+router.post('/login/social', User.authenticateSocial, authUser);
 
 router.get("/validate-token", authenticate, (req, res) => {
   res.status(200).json({ user: req.user });
@@ -80,6 +82,7 @@ router.get("/logout", (req, res, next) => {
   if (req.session) {
     req.session.destroy(err => {
       if (err) return next(err);
+      return res.status(200).json({});
     });
   }
 });
@@ -109,8 +112,8 @@ router.get("/verify", (req, res, next) => {
 });
 
 router.post("/search", async (req, res) => {
-  let users = await User.find({}).select('nickname -_id')
-  res.status(200).send(users)
+  let users = await User.find({}).select('nickname -_id');
+  res.status(200).send(users);
 });
 
 module.exports = router;
