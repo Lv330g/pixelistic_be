@@ -26,14 +26,18 @@ const io = require('socket.io').listen(server);
 io.on('connection', (socket) => {
   const chat = db.collection('chats');
 
-  socket.on('needMessages', () => {
+  const findMessages = () => {
     chat.find().sort({ _id: -1 }).limit(20).toArray((err, result) => {
       if (err) {
         throw err;
       }
 
-      socket.emit('gettingMessages', result);
+      socket.emit('gettingMessages', result.reverse());
     });
+  }
+
+  socket.on('needMessages', () => {
+    findMessages();
   })
 
   socket.on('message sent', (data) => {
@@ -41,13 +45,7 @@ io.on('connection', (socket) => {
     const { msg } = data;
 
     chat.insert({ author, msg }, () => {
-      chat.find().sort({ _id: -1 }).limit(20).toArray((err, result) => {
-        if (err) {
-          throw err;
-        }
-  
-        io.emit('gettingMessages', result);
-      });
+      findMessages();
     });
   });
 

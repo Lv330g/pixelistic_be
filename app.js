@@ -8,7 +8,7 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo')(session);
 const expressValidator =  require ('express-validator');
 const logger = require('morgan');
-const cors = require('cors')
+const cors = require('cors');
 const indexRouter = require('./routes/index');
 
 const app = express();

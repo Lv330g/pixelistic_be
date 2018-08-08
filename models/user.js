@@ -9,23 +9,32 @@ const UserSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-   email: {
+  avatar: {
+    type: String,
+  },
+  email: {
     type: String,
     unique: true,
     required: true,
-    trim: true
+    unique: true,
   },
   password: {
     type: String,
-    required: true
   },
   passwordConf: {
     type: String,
-    required: true
   },
   isAdmin:{
     type: Boolean,
     default: false
+  },
+  googleID:{
+    type: String,
+    unique: true,
+  },
+  facebookID:{
+    type: String,
+    unique: true,
   }
 });
 UserSchema.plugin(uniqueValidator, { message: 'This {PATH} already used' });
@@ -50,8 +59,74 @@ UserSchema.statics.authenticate = async (req, res, next) => {
   } catch (err) {
     err.status = 422;
     return next(err);
-    }
+  }
 }
+
+UserSchema.statics.authenticateSocial = async (req, res, next) => {
+  let currentUser;
+  try {
+    const user = req.body.user;
+
+    if(user.googleId) {
+      currentUser = await User.findOne({
+        googleID: user.googleId
+      });
+    } else {
+      currentUser = await User.findOne({
+        facebookID: user.id
+      });
+    }
+      
+    if (currentUser) {
+      req.session.user = currentUser; 
+      return next();
+    }
+
+    currentUser = await User.findOne({
+      email: user.email
+    });
+    
+    if (currentUser) {
+      if(user.googleId) {
+        await User.update({email: user.email}, {
+          googleID: user.googleId,
+          avatar: user.imageUrl
+        });
+      } else {
+        await User.update({email: user.email}, {
+          facebookID: user.id,
+          avatar: user.picture.data.url
+        });
+      }
+      
+      req.session.user = currentUser; 
+      return next();
+    }
+
+    let newUser;
+    if(user.googleId) {
+      newUser = await new User({
+        nickname: user.name,
+        googleID: user.googleId,
+        email: user.email,
+        avatar: user.imageUrl
+      }).save();
+    } else {
+      newUser = await new User({
+        nickname: user.name,
+        facebookID: user.id,
+        email: user.email,
+        avatar: user.picture.data.url
+      }).save();
+    }
+
+    req.session.user = newUser; 
+    return next();
+  } catch (err) {
+    err.status = 422;
+    return next(err);
+  };
+};
 
 UserSchema.statics.isUserInDB = async (email, nickname) => {
    let res = await User.find( { $or: [ { email: email }, { nickname: nickname } ] } );
@@ -79,14 +154,16 @@ UserSchema.statics.validate = (req, res, next) => {
 
 UserSchema.pre('save',  function (next) {
   let user = this;
-  bcrypt.hash(user.password, 10, (err, hash) => {
-    if (err) {
-      return next(err);
-    }
-    user.password = hash;
-    user.passwordConf = hash;
-    next();
-  })
+  if(user.password) {
+    bcrypt.hash(user.password, 10, (err, hash) => {
+      if (err) {
+        return next(err);
+      }
+      user.password = hash;
+      user.passwordConf = hash;
+    })
+  }
+  next();
 });
 
 const User = mongoose.model('User', UserSchema);
