@@ -8,8 +8,8 @@ const nodemailer = require("nodemailer");
 const expressJwt = require("express-jwt");
 const authenticate = expressJwt({ secret: "server secret" });
 
-const prepareUser = ({_id, nickname, email, isAdmin, avatar}) => {
-  return {_id, nickname, email, isAdmin, avatar};
+const prepareUser = ({_id, nickname, email, isAdmin, avatar, userName, website, userBio}) => {
+  return {_id, nickname, email, isAdmin, avatar, userName, website, userBio};
 }
 /**
  * Function sends an email to confirm the user's email address
@@ -85,6 +85,7 @@ router.get("/logout", (req, res, next) => {
       return res.status(200).json({});
     });
   }
+  res.status(200).send();
 });
 
 router.get("/verify", (req, res, next) => {
@@ -114,6 +115,37 @@ router.get("/verify", (req, res, next) => {
 router.post("/search", async (req, res) => {
   let users = await User.find({}).select('nickname -_id');
   res.status(200).send(users);
+});
+
+router.get('/profile/:nickname', async (req, res, next) => {
+  let nickname = req.params.nickname;
+  let profile = await User.find( {nickname: nickname} );
+  if (profile.length > 0)
+  {
+    res.status(200).json({userprofile: prepareUser(profile[0])});
+  } else {
+    res.status(404).send();
+  }
+});
+
+router.post('/profile/:nickname', async (req, res, next) => {
+  let nickname = req.params.nickname;
+  if (await User.isUserInDB('', nickname))
+  {
+    User.find({ nickname: nickname}, function (err, docs) {
+      docs[0].set({ 
+        userName: req.body.userName,
+        website: req.body.website,
+        userBio: req.body.userBio
+      });
+      docs[0].save(function (err, userProfile) {
+        if (err) return next(err);
+        res.status(200).send({userprofile: prepareUser(userProfile)});
+      });
+    });
+  } else {
+    res.status(404).send();
+  }
 });
 
 module.exports = router;

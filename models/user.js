@@ -38,6 +38,15 @@ const UserSchema = new mongoose.Schema({
   },
   newMessages:{
     type: Number
+  },
+  userName:{
+    type: String
+  },
+  website:{
+    type: String
+  }, 
+  userBio:{
+    type: String
   }
 });
 UserSchema.plugin(uniqueValidator, { message: 'This {PATH} already used' });
@@ -159,12 +168,12 @@ UserSchema.statics.validate = (req, res, next) => {
 UserSchema.pre('save',  function (next) {
   let user = this;
   if (user.password){
+    if (!user.isModified('password')) return next();
     bcrypt.hash(user.password, 10, (err, hash) => {
       if (err) {
         return next(err);
       }
       user.password = hash;
-      console.log(user.password);
       user.passwordConf = hash;
       next();
     });
