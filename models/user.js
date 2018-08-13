@@ -9,6 +9,10 @@ const UserSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  avatar: {
+    type: String,
+    default: 'https://cdn4.iconfinder.com/data/icons/evil-icons-user-interface/64/avatar-512.png'
+  },
   email: {
     type: String,
     unique: true,
@@ -18,29 +22,38 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  status: {
+    type: String,
+    default: 'offline'
+  },
+  followingsInfo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'FollowingInfo' }],
+  followings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   posts: [{ type : mongoose.Schema.ObjectId, ref: 'Post' }],
-  avatar:  String,
   password: String,
   googleID: String,
   facebookID: String,
-  friends: Array,
-  status: String,
-  newMessages: Number,
   userName: String,
   website: String,
   userBio: String, 
 });
+
 UserSchema.plugin(uniqueValidator, { message: 'This {PATH} already used' });
+
+const getUser = (query) => {
+  return User.findOne(query)
+  .populate({ 
+    path: 'posts',
+    populate: { path : 'author', select: 'nickname'}
+  })
+  .populate('followingsInfo', 'favorite newMessages followingId')
+  .populate('followings', 'status nickname avatar posts userBio website userName -_id');
+}
 
 UserSchema.statics.authenticate = async (req, res, next) => {
   try {
-    let user = await User.findOne({ email: req.body.email }).populate({ 
-      path: 'posts', 
-      populate: { 
-        path : 'author',
-        select: 'nickname'
-      } 
-    });
+    let user = await getUser({email: req.body.email});
+
     if(!user){
       let err = new Error('Email or password is incorrect');
       err.status = 422;
@@ -68,13 +81,9 @@ UserSchema.statics.authenticateSocial = async (req, res, next) => {
     const user = req.body.user;
 
     if(user.googleId) {
-      currentUser = await User.findOne({
-        googleID: user.googleId
-      });
+      currentUser = await getUser({googleID: user.googleId});
     } else {
-      currentUser = await User.findOne({
-        facebookID: user.id
-      });
+      currentUser = await getUser({facebookID: user.id});
     }
       
     if (currentUser) {
@@ -82,20 +91,16 @@ UserSchema.statics.authenticateSocial = async (req, res, next) => {
       return next();
     }
 
-    currentUser = await User.findOne({
-      email: user.email
-    });
+    currentUser = await getUser({email: user.email});
     
     if (currentUser) {
       if(user.googleId) {
         await User.update({email: user.email}, {
           googleID: user.googleId,
-          avatar: user.imageUrl
         });
       } else {
         await User.update({email: user.email}, {
           facebookID: user.id,
-          avatar: user.picture.data.url
         });
       }
       
@@ -105,7 +110,6 @@ UserSchema.statics.authenticateSocial = async (req, res, next) => {
 
     let newUser;
     if(user.googleId) {
-
       newUser = await new User({
         nickname: user.name,
         googleID: user.googleId,
@@ -170,5 +174,39 @@ UserSchema.pre('save',  function (next) {
   }
 });
 
+// followings
+UserSchema.statics.follow = async (req, res, next) => {
+  await User.findOneAndUpdate(
+    {'_id': req.body.current},
+    {$push: {'followingsInfo': req.payload.followingInfoId, 'followings': req.body.following}},
+  );
+  await User.findOneAndUpdate(
+    {'_id': req.body.following},
+    {$push: {'followers': req.body.current}},
+  );
+  next();
+};
+
+UserSchema.statics.unfollow = async (req, res, next) => {
+  await User.findOneAndUpdate(
+    {'_id': req.body.current},
+    {$pull: {'followingsInfo': req.body.followingInfoId, 'followings': req.body.following}}
+  );
+  await User.findOneAndUpdate(
+    {'_id': req.body.following},
+    {$pull: {'followers': req.body.current}}
+  );
+  next();
+};
+
+//profile
+UserSchema.statics.getProfile = async (req, res, next) => {
+  req.payload = await User.findOne(
+    {nickname: req.params.nickname},
+    'avatar posts nickname userBio userName website'
+  );
+  next();
+};
+
 const User = mongoose.model('User', UserSchema);
-module.exports = User;
+module.exports = { User, getUser };

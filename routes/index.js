@@ -2,17 +2,16 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
-
 const jwt = require("jsonwebtoken");
 const expressJwt = require("express-jwt");
 const authenticate = expressJwt({ secret: "server secret" });
-
 const HashForEmail = require("../models/hashForEmail");
-const User = require('../models/user');
+const { User, getUser } = require('../models/user');
 
-const prepareUser = ({_id, nickname, email, posts, isAdmin, avatar, userName, website, userBio}) => {
-  return {_id, nickname, email, isAdmin, posts, avatar, userName, website, userBio};
-}
+const prepareUser = ({_id, nickname, email, posts, isAdmin, avatar, userName, website, userBio, followings, followingsInfo, followers}) => {
+  return {_id, nickname, email, isAdmin, posts, avatar, userName, website, userBio, followings, followingsInfo, followers};
+};
+
 /**
  * Function sends an email to confirm the user's email address
  *
@@ -45,7 +44,7 @@ const confirmEmail = user => {
       });
     }, 5 * 60 * 1000);
 
-    let link = `http://127.0.0.1:8080/verify?hash=${newUser.hash}`;
+    let link = `http://localhost:8080/verify?hash=${newUser.hash}`;
     let mailOptions = {
       to: user.email,
       subject: "Please confirm your Email account",
@@ -76,21 +75,13 @@ router.post('/login', User.authenticate, authUser);
 
 router.post('/login/social', User.authenticateSocial, authUser);
 
-router.get("/validate-token", authenticate, async (req, res) => {
+router.get("/validate-token", authenticate, async (req, res, next) => {
   try {
-    const userId = req.user._id;
-    const user = await User.findById(userId).populate({ 
-      path: 'posts', 
-      populate: { 
-        path : 'author',
-        select: 'nickname avatar'
-      } 
-    });
-    res.status(200).json({ user: prepareUser(user) });
-  } catch(err){
+    const user = await getUser({'_id': req.user._id});
+    res.status(200).json({user: prepareUser(user)});
+  } catch (err) {
     next(err);
   }
- 
 });
 
 router.get("/logout", (req, res, next) => {
@@ -108,12 +99,12 @@ router.get("/verify", (req, res, next) => {
       let newUser = {
         nickname: hashForEmail.nickname,
         email: hashForEmail.email,
-        password: hashForEmail.password
+        password: hashForEmail.password,
       };
       //Add user and delete hash
       User.create(newUser);
       hashForEmail.remove();
-      res.redirect("/");
+      res.redirect("/sign-in");
     } catch (err) {
       err.status = 422;
       next(err);
@@ -146,8 +137,7 @@ router.get('/profile/:nickname', async (req, res, next) => {
 
 router.post('/profile/:nickname', async (req, res, next) => {
   let nickname = req.params.nickname;
-  if (await User.isUserInDB('', nickname))
-  {
+  if (await User.isUserInDB('', nickname)) {
     User.find({ nickname: nickname}, function (err, docs) {
       docs[0].set({ 
         userName: req.body.userName,

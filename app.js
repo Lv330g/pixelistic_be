@@ -12,18 +12,14 @@ const cors = require('cors');
 const indexRouter = require('./routes/index');
 const postRouter = require('./routes/post');
 const searchRouter = require('./routes/search');
+const followingsRouter = require('./routes/followings');
+const profileRouter = require('./routes/profile');
 
 const app = express();
 
-//mongoose connection
 mongoose.connect ('mongodb://admin:Admin1234@ds245661.mlab.com:45661/pixelapp');
-
 const db = mongoose.connection;
-
 db.on('error', console.error.bind (console, 'connection error:'));
-db.once ('open', () => {
-  //connected
-});
 
 //use sessions for tracking logins
 app.use(session({
@@ -46,6 +42,8 @@ app.use(cors());
 app.use('/', indexRouter);
 app.use('/', postRouter);
 app.use('/', searchRouter);
+app.use('/followings', followingsRouter);
+app.use('/profile', profileRouter);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
@@ -59,7 +57,5 @@ app.use((err, req, res, next) => {
   res.locals.error = req.app.get('env') === 'development' ? err : {};
   res.status(err.status || 500).json({ error: err.message });
 });
-
-
 
 module.exports = { app, db };
