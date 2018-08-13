@@ -9,51 +9,38 @@ const UserSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  avatar: {
-    type: String,
-  },
   email: {
     type: String,
     unique: true,
     required: true,
   },
-  password: {
-    type: String,
-  },
   isAdmin:{
     type: Boolean,
     default: false
   },
-  googleID:{
-    type: String,
-  },
-  facebookID:{
-    type: String,
-  },
-  friends:{
-    type: Array
-  },
-  status:{
-    type: String
-  },
-  newMessages:{
-    type: Number
-  },
-  userName:{
-    type: String
-  },
-  website:{
-    type: String
-  }, 
-  userBio:{
-    type: String
-  }
+  posts: [{ type : mongoose.Schema.ObjectId, ref: 'Post' }],
+  avatar:  String,
+  password: String,
+  googleID: String,
+  facebookID: String,
+  friends: Array,
+  status: String,
+  newMessages: Number,
+  userName: String,
+  website: String,
+  userBio: String, 
 });
 UserSchema.plugin(uniqueValidator, { message: 'This {PATH} already used' });
 
 UserSchema.statics.authenticate = async (req, res, next) => {
   try {
-    let user = await User.findOne({ email: req.body.email });
+    let user = await User.findOne({ email: req.body.email }).populate({ 
+      path: 'posts', 
+      populate: { 
+        path : 'author',
+        select: 'nickname'
+      } 
+    });
     if(!user){
       let err = new Error('Email or password is incorrect');
       err.status = 422;
@@ -61,7 +48,7 @@ UserSchema.statics.authenticate = async (req, res, next) => {
     }
     let match = await bcrypt.compare (req.body.password, user.password);
     if(match) {
-      req.session.user = user; 
+      req.session.user = user;
       return next();
     } else { 
       let err = new Error('Email or password is incorrect');
@@ -69,6 +56,7 @@ UserSchema.statics.authenticate = async (req, res, next) => {
       return next(err);
     }
   } catch (err) {
+   
     err.status = 422;
     return next(err);
   }

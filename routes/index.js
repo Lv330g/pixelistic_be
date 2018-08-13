@@ -1,15 +1,17 @@
 const express = require("express");
-const User = require("../models/user");
-const HashForEmail = require("../models/hashForEmail");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 const router = express.Router();
+const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
+
+const jwt = require("jsonwebtoken");
 const expressJwt = require("express-jwt");
 const authenticate = expressJwt({ secret: "server secret" });
 
-const prepareUser = ({_id, nickname, email, isAdmin, avatar, userName, website, userBio}) => {
-  return {_id, nickname, email, isAdmin, avatar, userName, website, userBio};
+const HashForEmail = require("../models/hashForEmail");
+const User = require('../models/user');
+
+const prepareUser = ({_id, nickname, email, posts, isAdmin, avatar, userName, website, userBio}) => {
+  return {_id, nickname, email, isAdmin, posts, avatar, userName, website, userBio};
 }
 /**
  * Function sends an email to confirm the user's email address
@@ -53,7 +55,12 @@ const confirmEmail = user => {
   });
 };
 
-router.post("/register", User.validate, async (req, res, next) => {
+const authUser = (req, res) => {
+  req.token = jwt.sign(prepareUser(req.session.user), 'server secret', { expiresIn: '2h'});
+  res.status(200).json({user: prepareUser(req.session.user), accessToken: req.token});
+}
+
+router.post('/register', User.validate, async (req, res, next) => {
   if (await User.isUserInDB(req.body.email, req.body.nickname)) {
     const err = new Error("User exists");
     err.status = 422;
@@ -65,17 +72,25 @@ router.post("/register", User.validate, async (req, res, next) => {
     .json({ text: `Email has been sent. Please check the inbox` });
 });
 
-const authUser = (req, res) => {
-  req.token = jwt.sign(prepareUser(req.session.user), 'server secret', { expiresIn: '2h'});
-  res.status(200).json({user: prepareUser(req.session.user), accessToken: req.token});
-}
-
 router.post('/login', User.authenticate, authUser);
 
 router.post('/login/social', User.authenticateSocial, authUser);
 
-router.get("/validate-token", authenticate, (req, res) => {
-  res.status(200).json({ user: req.user });
+router.get("/validate-token", authenticate, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId).populate({ 
+      path: 'posts', 
+      populate: { 
+        path : 'author',
+        select: 'nickname avatar'
+      } 
+    });
+    res.status(200).json({ user: prepareUser(user) });
+  } catch(err){
+    next(err);
+  }
+ 
 });
 
 router.get("/logout", (req, res, next) => {
@@ -85,7 +100,6 @@ router.get("/logout", (req, res, next) => {
       return res.status(200).json({});
     });
   }
-  res.status(200).send();
 });
 
 router.get("/verify", (req, res, next) => {
@@ -119,9 +133,16 @@ router.post("/search", async (req, res) => {
 
 router.get('/profile/:nickname', async (req, res, next) => {
   let nickname = req.params.nickname;
-  let profile = await User.find( {nickname: nickname} );
+  let profile = await User.find( {nickname: nickname} ).populate({ 
+    path: 'posts', 
+    populate: { 
+      path : 'author',
+      select: 'nickname avatar'
+    } 
+  });
   if (profile.length > 0)
-  {
+  { 
+    
     res.status(200).json({userprofile: prepareUser(profile[0])});
   } else {
     res.status(404).send();
