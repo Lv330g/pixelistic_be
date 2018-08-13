@@ -2,6 +2,10 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const uniqueValidator = require('mongoose-unique-validator');
 
+const prepareUser = ({_id, nickname, email, isAdmin, avatar, userName, website, userBio}) => {
+  return {_id, nickname, email, isAdmin, avatar, userName, website, userBio};
+}
+
 const UserSchema = new mongoose.Schema({
   nickname: {
     type: String,
@@ -165,6 +169,39 @@ UserSchema.statics.validate = (req, res, next) => {
   return next();
 }
 
+UserSchema.statics.userProfile = async (req, res, next) => {
+  let nickname = req.params.nickname;
+  let profile = await User.find( {nickname: nickname} );
+  if (profile.length > 0)
+  {
+    res.status(200).json({userprofile: prepareUser(profile[0])});
+  } else {
+    let error = new Error("User not found");
+      error.status = 404;
+      next(error);
+  }
+};
+
+UserSchema.statics.saveEditProfile = async (req, res, next) => {
+  let nickname = req.params.nickname;
+  if (await User.isUserInDB('', nickname))
+  {
+    User.find({ nickname: nickname}, function (err, docs) {
+      docs[0].set({ 
+        userName: req.body.userName,
+        website: req.body.website,
+        userBio: req.body.userBio
+      });
+      docs[0].save(function (err, userProfile) {
+        if (err) return next(err);
+        res.status(200).send({userprofile: prepareUser(userProfile)});
+      });
+    });
+  } else {
+    res.status(404).send();
+  }
+};
+
 UserSchema.pre('save',  function (next) {
   let user = this;
   if (user.password){
@@ -183,4 +220,5 @@ UserSchema.pre('save',  function (next) {
 });
 
 const User = mongoose.model('User', UserSchema);
+User.prepareUser = prepareUser;
 module.exports = User;
