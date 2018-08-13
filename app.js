@@ -8,13 +8,14 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo')(session);
 const expressValidator =  require ('express-validator');
 const logger = require('morgan');
-const cors = require('cors')
+const cors = require('cors');
 const indexRouter = require('./routes/index');
 
 const app = express();
 
 //mongoose connection
 mongoose.connect ('mongodb://admin:Admin1234@ds245661.mlab.com:45661/pixelapp');
+
 const db = mongoose.connection;
 
 db.on('error', console.error.bind (console, 'connection error:'));
