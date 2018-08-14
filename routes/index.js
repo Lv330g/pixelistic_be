@@ -117,6 +117,6 @@ router.post("/search", async (req, res) => {
 
 router.get('/profile/:nickname', User.userProfile);
 
-router.post('/profile/:nickname', User.saveEditProfile);
+router.post('/profile/:id', User.saveEditProfile);
 
 module.exports = router;
