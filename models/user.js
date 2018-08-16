@@ -40,15 +40,21 @@ const UserSchema = new mongoose.Schema({
 
 UserSchema.plugin(uniqueValidator, { message: 'This {PATH} already used' });
 
-const getUser = (query) => {
-  return User.findOne(query)
+const getUser = async (query) => {
+  return await User.findOne(query)
   .populate({ 
     path: 'posts',
-    populate: { path : 'author', select: 'nickname'}
+    populate: { path : 'author', select: 'nickname avatar'}
   })
   .populate('followingsInfo', 'favorite newMessages followingId')
-  .populate('followings', 'status nickname avatar posts userBio website userName -_id');
+  .populate('followings', 'status nickname avatar userBio website userName -_id')
+  .populate ( {path: 'followings', populate: {
+    path:'posts',
+    populate: { path : 'author', select: 'nickname avatar'}
+  }});
 }
+
+//'status nickname avatar posts userBio website userName -_id'
 
 UserSchema.statics.authenticate = async (req, res, next) => {
   try {
@@ -190,10 +196,10 @@ UserSchema.statics.follow = async (req, res, next) => {
 UserSchema.statics.unfollow = async (req, res, next) => {
   await User.findOneAndUpdate(
     {'_id': req.body.current},
-    {$pull: {'followingsInfo': req.body.followingInfoId, 'followings': req.body.following}}
+    {$pull: {'followingsInfo': req.body.followingInfoId, 'followings': req.body.followingId}}
   );
   await User.findOneAndUpdate(
-    {'_id': req.body.following},
+    {'_id': req.body.followingId},
     {$pull: {'followers': req.body.current}}
   );
   next();
@@ -203,8 +209,11 @@ UserSchema.statics.unfollow = async (req, res, next) => {
 UserSchema.statics.getProfile = async (req, res, next) => {
   req.payload = await User.findOne(
     {nickname: req.params.nickname},
-    'avatar posts nickname userBio userName website'
-  );
+    'avatar posts nickname followings followers userBio userName website'
+  ).populate({ 
+    path: 'posts',
+    populate: { path : 'author', select: 'nickname avatar'}
+  });
   next();
 };
 

@@ -47,4 +47,17 @@ router.post('/add-post', authenticate, saveImage, Post.addPost, addPostToUser, (
   res.status(200).json({ post: req.addedPost });
 })
 
+router.patch('/like-post', Post.addLike, (req, res, next) => {
+  res.status(200).json({ newLikes: { likes: req.likes, _id: req.postId } });
+});
+
+router.patch('/unlike-post', Post.removeLike, (req, res, next) => {
+  res.status(200).json({ newLikes: { likes: req.likes, _id: req.postId } });
+});
+
+router.patch('/comment-post', Post.addComment, (req, res, next) => {
+  res.status(200).json({ newComments: { comments: req.comments, _id: req.postId } });
+});
+
+
 module.exports = router;
