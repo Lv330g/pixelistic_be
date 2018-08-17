@@ -126,11 +126,6 @@ router.get("/verify", (req, res, next) => {
   });
 });
 
-router.post("/search", async (req, res) => {
-  let users = await User.find({}).select('nickname -_id');
-  res.status(200).send(users);
-});
-
 router.get('/profile/:nickname', async (req, res, next) => {
   let nickname = req.params.nickname;
   let profile = await User.find( {nickname: nickname} ).populate({ 
