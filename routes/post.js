@@ -4,7 +4,7 @@ const expressJwt = require('express-jwt');
 const fs = require('fs');
 const authenticate = expressJwt({secret : 'server secret'});
 const Post = require('../models/post');
-const User = require('../models/user');
+const { User } = require('../models/user');
 
 const saveImage = (req, res, next) => {
   const { post } = req.body;
