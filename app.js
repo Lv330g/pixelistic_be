@@ -20,7 +20,7 @@ const app = express();
 mongoose.connect ('mongodb://admin:Admin1234@ds245661.mlab.com:45661/pixelapp');
 const db = mongoose.connection;
 db.on('error', console.error.bind (console, 'connection error:'));
-
+//comments
 //use sessions for tracking logins
 app.use(session({
   secret: 'projectApp',

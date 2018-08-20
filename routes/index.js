@@ -117,23 +117,23 @@ router.get("/verify", (req, res, next) => {
   });
 });
 
-router.get('/profile/:nickname', async (req, res, next) => {
-  let nickname = req.params.nickname;
-  let profile = await User.find( {nickname: nickname} ).populate({ 
-    path: 'posts', 
-    populate: { 
-      path : 'author',
-      select: 'nickname avatar'
-    } 
-  });
-  if (profile.length > 0)
-  { 
+// router.get('/profile/:nickname', async (req, res, next) => {
+//   let nickname = req.params.nickname;
+//   let profile = await User.find( {nickname: nickname} ).populate({ 
+//     path: 'posts', 
+//     populate: { 
+//       path : 'author',
+//       select: 'nickname avatar'
+//     } 
+//   });
+//   if (profile.length > 0)
+//   { 
     
-    res.status(200).json({userprofile: prepareUser(profile[0])});
-  } else {
-    res.status(404).send();
-  }
-});
+//     res.status(200).json({userprofile: prepareUser(profile[0])});
+//   } else {
+//     res.status(404).send();
+//   }
+// });
 
 router.post('/profile/:nickname', async (req, res, next) => {
   let nickname = req.params.nickname;

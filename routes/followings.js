@@ -20,7 +20,7 @@ router.post('/follow', authenticate, FollowingInfo.follow, User.follow, getAddit
 });
 
 router.post('/unfollow', authenticate, FollowingInfo.unfollow, User.unfollow, (req, res) => {
-  res.status(200).json({payload: req.body.following});
+  res.status(200).json({payload: req.body.followingId});
 });
 
 router.post('/handle-favorite', authenticate, FollowingInfo.handleFavorite, (req, res) => {
