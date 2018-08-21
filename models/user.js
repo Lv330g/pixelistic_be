@@ -333,5 +333,23 @@ UserSchema.statics.saveEditProfile = async (req, res, next) => {
   };
 };
 
+//dashboard
+UserSchema.statics.getUsersForAdmin = async (req, res, next) => {
+  try {
+    req.payload = await User.find({});
+    console.log(req.payload);
+    next();
+  } catch (err) {
+    err.status = 404;
+    next(err);
+  }
+};
+
+UserSchema.statics.updateStatus = async (req, res, next) => {
+  const newUser = await User.findByIdAndUpdate(req.body.id, { $set:{'isActive': req.body.status }},{ new: true});
+  req.status = newUser.isActive;
+  next();
+};
+
 const User = mongoose.model('User', UserSchema);
 module.exports = { User, getUser };
