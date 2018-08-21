@@ -6,24 +6,28 @@ const { User } = require('../models/user');
 const FollowingInfo = require('../models/following-info');
 
 const getAdditionalInfo = async (req, res, next) => {
-  const data = await User.findById(
-    {'_id': req.body.following}, 
-    'status -_id'
-  );
+  try {
+    const data = await User.findById(
+      {'_id': req.body.following}, 
+      'status -_id'
+    );
 
-  req.payload.status = data.status;
-  next();
+    req.payload.status = data.status;
+    next();
+  } catch (err) {
+    next(err);
+  }
 }
 
-router.post('/follow', authenticate, FollowingInfo.follow, User.follow, getAdditionalInfo, (req, res) => {
+router.patch('/follow', authenticate, FollowingInfo.follow, User.follow, getAdditionalInfo, (req, res) => {
   res.status(200).json({payload: req.payload});
 });
 
-router.post('/unfollow', authenticate, FollowingInfo.unfollow, User.unfollow, (req, res) => {
+router.patch('/unfollow', authenticate, FollowingInfo.unfollow, User.unfollow, (req, res) => {
   res.status(200).json({payload: req.body.followingId});
 });
 
-router.post('/handle-favorite', authenticate, FollowingInfo.handleFavorite, (req, res) => {
+router.patch('/handle-favorite', authenticate, FollowingInfo.handleFavorite, (req, res) => {
   res.status(200).json({payload: req.body});
 });
 

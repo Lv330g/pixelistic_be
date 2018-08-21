@@ -117,25 +117,6 @@ router.get("/verify", (req, res, next) => {
   });
 });
 
-router.post('/profile/:nickname', async (req, res, next) => {
-  let nickname = req.params.nickname;
-  if (await User.isUserInDB('', nickname)) {
-    User.find({ nickname: nickname}, function (err, docs) {
-      docs[0].set({ 
-        userName: req.body.userName,
-        website: req.body.website,
-        userBio: req.body.userBio
-      });
-      docs[0].save(function (err, userProfile) {
-        if (err) return next(err);
-        res.status(200).send({userprofile: prepareUser(userProfile)});
-      });
-    });
-  } else {
-    res.status(404).send();
-  }
-});
-
 router.post('/forgot', User.isEmailDB, (req, res, next) => {
   const smtpTransport = nodemailer.createTransport({
     service: 'Gmail',

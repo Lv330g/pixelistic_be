@@ -48,6 +48,10 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  socketId: {
+    type: String,
+    default: 'offline'
+  },
   followingsInfo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'FollowingInfo' }],
   followings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -61,18 +65,17 @@ UserSchema.plugin(uniqueValidator, { message: 'This {PATH} already used' });
 
 const getUser = async (query) => {
   return await User.findOne(query)
-    .populate({
-      path: 'posts',
-      populate: { path: 'author', select: 'nickname avatar' }
-    })
-    .populate('followingsInfo', 'favorite newMessages followingId')
-    .populate('followings', 'status nickname avatar userBio website userName -_id')
-    .populate({
-      path: 'followings', populate: {
-        path: 'posts',
-        populate: { path: 'author', select: 'nickname avatar' }
-      }
-    });
+  .populate({ 
+    path: 'posts',
+    populate: { path : 'author', select: 'nickname avatar'}
+  })
+  .populate('followingsInfo', 'favorite newMessages followingId')
+  .populate('followings', 'status nickname avatar userBio website userName -_id')
+  .populate ( {path: 'followings', populate: {
+    path:'posts',
+    populate: { path : 'author', select: 'nickname avatar'}
+  }})
+  .populate('followers', 'status socketId');
 }
 
 //'status nickname avatar posts userBio website userName -_id'
@@ -166,7 +169,7 @@ UserSchema.statics.isUserInDB = async (email, nickname) => {
 }
 UserSchema.statics.isEmailDB = async (req, res, next) => {
   let result = await User.findOne({ email: req.body.email });
-  if(result){
+  if (result) {
     bcrypt.hash(toString(result.email), 10, (err, hash) => {
       if (err) {
         return next(err);
@@ -180,7 +183,7 @@ UserSchema.statics.isEmailDB = async (req, res, next) => {
         return next();
       }
     })
-  }else{
+  } else {
     const err = new Error('There is no user with this email');
     err.status = 422;
     return next(err);
@@ -193,7 +196,7 @@ UserSchema.statics.isResetTikenOk = (req, res, next) => {
     const err = new Error('Token incorect or expire');
     err.status = 422;
     return next(err);
-    }else{
+    } else {
       return next();
     } 
   });
@@ -207,24 +210,22 @@ UserSchema.statics.isPaswordChanged = (req, res, next) => {
       const err = new Error('Token incorrect or expore!');
       err.status = 422;
       return next(err);
-      }else{
+      } else {
           bcrypt.hash(req.body.password, 10, (err, hash) => {
             if (err) {
               return next(err);
-            }else{
+            } else {
               result.update( {password:hash}).exec();
               return next();
             }
           })
       } 
     });
-  }else{
+  } else {
     const err = new Error('Passwords does not match');
       err.status = 422;
       return next(err);
   }
-
-
 }
 
 UserSchema.statics.validate = (req, res, next) => {
@@ -265,39 +266,51 @@ UserSchema.pre('save', function (next) {
 
 // followings
 UserSchema.statics.follow = async (req, res, next) => {
-  await User.findOneAndUpdate(
-    { '_id': req.body.current },
-    { $push: { 'followingsInfo': req.payload.followingInfoId, 'followings': req.body.following } },
-  );
-  await User.findOneAndUpdate(
-    { '_id': req.body.following },
-    { $push: { 'followers': req.body.current } },
-  );
-  next();
+  try {
+    await User.findOneAndUpdate(
+      {'_id': req.body.current},
+      {$push: {'followingsInfo': req.payload.followingInfoId, 'followings': req.body.following}},
+    );
+    await User.findOneAndUpdate(
+      {'_id': req.body.following},
+      {$push: {'followers': req.body.current}},
+    );
+    next();
+  } catch (err) {
+    next(err);
+  }
 };
 
 UserSchema.statics.unfollow = async (req, res, next) => {
-  await User.findOneAndUpdate(
-    { '_id': req.body.current },
-    { $pull: { 'followingsInfo': req.body.followingInfoId, 'followings': req.body.followingId } }
-  );
-  await User.findOneAndUpdate(
-    { '_id': req.body.followingId },
-    { $pull: { 'followers': req.body.current } }
-  );
-  next();
+  try {
+    await User.findOneAndUpdate(
+      {'_id': req.body.current},
+      {$pull: {'followingsInfo': req.body.followingInfoId, 'followings': req.body.followingId}}
+    );
+    await User.findOneAndUpdate(
+      {'_id': req.body.followingId},
+      {$pull: {'followers': req.body.current}}
+    );
+    next();
+  } catch (err) {
+    next(err);
+  }
 };
 
 //profile
 UserSchema.statics.getProfile = async (req, res, next) => {
-  req.payload = await User.findOne(
-    { nickname: req.params.nickname },
-    'avatar posts nickname followings followers bio fullName website'
-  ).populate({
-    path: 'posts',
-    populate: { path: 'author', select: 'nickname avatar' }
-  });
-  next();
+  try {
+    req.payload = await User.findOne(
+      {nickname: req.params.nickname},
+      'avatar posts nickname followings followers userBio userName website'
+    ).populate({ 
+      path: 'posts',
+      populate: { path : 'author', select: 'nickname avatar'}
+    });
+    next();
+  } catch (err) {
+    next(err);
+  }
 };
 
 UserSchema.statics.saveEditProfile = async (req, res, next) => {
