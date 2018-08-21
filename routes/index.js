@@ -8,8 +8,8 @@ const authenticate = expressJwt({ secret: "server secret" });
 const HashForEmail = require("../models/hashForEmail");
 const { User, getUser } = require('../models/user');
 
-const prepareUser = ({_id, nickname, email, posts, isAdmin, avatar, userName, website, userBio, followings, followingsInfo, followers}) => {
-  return {_id, nickname, email, isAdmin, posts, avatar, userName, website, userBio, followings, followingsInfo, followers};
+const prepareUser = ({_id, nickname, email, posts, isAdmin, avatar, fullName, website, bio, followings, followingsInfo, followers}) => {
+  return {_id, nickname, email, isAdmin, posts, avatar, fullName, website, bio, followings, followingsInfo, followers};
 };
 
 /**
@@ -115,43 +115,6 @@ router.get("/verify", (req, res, next) => {
       next(error);
     }
   });
-});
-
-// router.get('/profile/:nickname', async (req, res, next) => {
-//   let nickname = req.params.nickname;
-//   let profile = await User.find( {nickname: nickname} ).populate({ 
-//     path: 'posts', 
-//     populate: { 
-//       path : 'author',
-//       select: 'nickname avatar'
-//     } 
-//   });
-//   if (profile.length > 0)
-//   { 
-    
-//     res.status(200).json({userprofile: prepareUser(profile[0])});
-//   } else {
-//     res.status(404).send();
-//   }
-// });
-
-router.post('/profile/:nickname', async (req, res, next) => {
-  let nickname = req.params.nickname;
-  if (await User.isUserInDB('', nickname)) {
-    User.find({ nickname: nickname}, function (err, docs) {
-      docs[0].set({ 
-        userName: req.body.userName,
-        website: req.body.website,
-        userBio: req.body.userBio
-      });
-      docs[0].save(function (err, userProfile) {
-        if (err) return next(err);
-        res.status(200).send({userprofile: prepareUser(userProfile)});
-      });
-    });
-  } else {
-    res.status(404).send();
-  }
 });
 
 module.exports = router;
