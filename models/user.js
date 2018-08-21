@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const uniqueValidator = require('mongoose-unique-validator');
-
+const { nameReq, emailReq, emailValid, passReq, passLen, passMatch, incorrect } = require('../const/error-messages.js');
 const profileUtil = require('../utils/profile');
 
 const UserSchema = new mongoose.Schema({
@@ -52,6 +52,10 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: 'offline'
   },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
   followingsInfo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'FollowingInfo' }],
   followings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -85,7 +89,7 @@ UserSchema.statics.authenticate = async (req, res, next) => {
     let user = await getUser({ email: req.body.email });
 
     if (!user) {
-      let err = new Error('Email or password is incorrect');
+      let err = new Error(incorrect);
       err.status = 422;
       return next(err);
     }
@@ -94,12 +98,11 @@ UserSchema.statics.authenticate = async (req, res, next) => {
       req.session.user = user;
       return next();
     } else {
-      let err = new Error('Email or password is incorrect');
+      let err = new Error(incorrect);
       err.status = 422;
       return next(err);
     }
   } catch (err) {
-
     err.status = 422;
     return next(err);
   }
@@ -167,13 +170,14 @@ UserSchema.statics.isUserInDB = async (email, nickname) => {
   let res = await User.find({ $or: [{ email: email }, { nickname: nickname }] });
   return res.length;
 }
+
 UserSchema.statics.isEmailDB = async (req, res, next) => {
   let result = await User.findOne({ email: req.body.email });
   if (result) {
     bcrypt.hash(toString(result.email), 10, (err, hash) => {
       if (err) {
         return next(err);
-      }else{
+      } else {
         token = hash;
         resetPasswordToken = token;
         resetPasswordExpires = Date.now() + 3600000; // 1 hour
@@ -221,22 +225,22 @@ UserSchema.statics.isPaswordChanged = (req, res, next) => {
           })
       } 
     });
-  } else {
-    const err = new Error('Passwords does not match');
+  }else{
+    const err = new Error(passMatch);
       err.status = 422;
       return next(err);
   }
 }
 
 UserSchema.statics.validate = (req, res, next) => {
-  req.checkBody('nickname', 'Name is required').notEmpty();
-  req.checkBody('email', 'Name is required').notEmpty()
-  req.checkBody('email', 'Email must be valid').isEmail();
-  req.checkBody('passwordConf', 'Password is required').notEmpty()
-  req.checkBody('passwordConf', 'Password must contain at least 6 characters').isLength({ min: 6 });
-  req.checkBody('password', 'Password is required').notEmpty();
-  req.checkBody('password', 'Password must contain at least 6 characters').isLength({ min: 6 });
-  req.checkBody('password', 'Passwords do not matched').equals(req.body.passwordConf);
+  req.checkBody('nickname', nameReq).notEmpty();
+  req.checkBody('email', emailReq).notEmpty()
+  req.checkBody('email', emailValid).isEmail();
+  req.checkBody('passwordConf', passReq).notEmpty()
+  req.checkBody('passwordConf', passLen).isLength({ min: 6 });
+  req.checkBody('password', passReq).notEmpty();
+  req.checkBody('password', passLen).isLength({ min: 6 });
+  req.checkBody('password', passMatch).equals(req.body.passwordConf);
 
   let errors = req.validationErrors();
   if (errors) {
