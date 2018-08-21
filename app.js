@@ -18,8 +18,8 @@ const dashboardRouter = require('./routes/dashboard');
 
 const app = express();
 
-// mongoose.connect ('mongodb://admin:Admin1234@ds245661.mlab.com:45661/pixelapp');
-mongoose.connect ('mongodb://admin:dexter666@ds219532.mlab.com:19532/pixel330');
+mongoose.connect ('mongodb://admin:Admin1234@ds245661.mlab.com:45661/pixelapp');
+
 const db = mongoose.connection;
 db.on('error', console.error.bind (console, 'connection error:'));
 //comments
