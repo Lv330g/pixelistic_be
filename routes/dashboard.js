@@ -4,12 +4,12 @@ const expressJwt = require('express-jwt');
 const authenticate = expressJwt({secret : 'server secret'});
 const { User } = require('../models/user');
 
-router.get('/get-profile/:nickname', authenticate, User.getProfile, (req, res) => {
+router.get('/', authenticate, User.getUsersForAdmin, (req, res) => {
   res.status(200).json({payload: req.payload});
 });
 
-router.post('/:id', authenticate, User.saveEditProfile, (req, res) => {
-  res.status(200).json({payload: req.payload});
+router.patch('/', authenticate, User.updateStatus, (req, res) => {
+  res.status(200).json({payload: {id:req.body.id, status:req.status} });
 });
 
 module.exports = router;
