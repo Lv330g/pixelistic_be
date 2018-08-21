@@ -20,7 +20,15 @@ const UserSchema = new mongoose.Schema({
     unique: true,
     required: true,
   },
-  isAdmin: {
+  resetPasswordToken:{
+    type: String,
+    default: false
+  },
+  resetPasswordExpires:{
+    type: String,
+    default: false
+  },  
+  isAdmin:{
     type: Boolean,
     default: false
   },
@@ -155,6 +163,68 @@ UserSchema.statics.authenticateSocial = async (req, res, next) => {
 UserSchema.statics.isUserInDB = async (email, nickname) => {
   let res = await User.find({ $or: [{ email: email }, { nickname: nickname }] });
   return res.length;
+}
+UserSchema.statics.isEmailDB = async (req, res, next) => {
+  let result = await User.findOne({ email: req.body.email });
+  if(result){
+    bcrypt.hash(toString(result.email), 10, (err, hash) => {
+      if (err) {
+        return next(err);
+      }else{
+        token = hash;
+        resetPasswordToken = token;
+        resetPasswordExpires = Date.now() + 3600000; // 1 hour
+        result.update( {resetPasswordToken:resetPasswordToken}).exec();
+        result.update( {resetPasswordExpires:resetPasswordExpires}).exec();
+
+        return next();
+      }
+    })
+  }else{
+    const err = new Error('There is no user with this email');
+    err.status = 422;
+    return next(err);
+  }
+}
+
+UserSchema.statics.isResetTikenOk = (req, res, next) => {
+  User.findOne({ resetPasswordToken: req.query.reset, resetPasswordExpires: { $gt: Date.now() } }, function(err, user) {
+    if (user === null) {
+    const err = new Error('Token incorect or expire');
+    err.status = 422;
+    return next(err);
+    }else{
+      return next();
+    } 
+  });
+}
+
+UserSchema.statics.isPaswordChanged = (req, res, next) => {
+  let token = req.body.resetToken.substring(7, req.body.resetToken.length)
+  if(req.body.password === req.body.passwordConf){
+    User.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: Date.now() } }, function(err, result) {
+      if (result === null) {
+      const err = new Error('Token incorrect or expore!');
+      err.status = 422;
+      return next(err);
+      }else{
+          bcrypt.hash(req.body.password, 10, (err, hash) => {
+            if (err) {
+              return next(err);
+            }else{
+              result.update( {password:hash}).exec();
+              return next();
+            }
+          })
+      } 
+    });
+  }else{
+    const err = new Error('Passwords does not match');
+      err.status = 422;
+      return next(err);
+  }
+
+
 }
 
 UserSchema.statics.validate = (req, res, next) => {

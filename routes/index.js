@@ -117,4 +117,55 @@ router.get("/verify", (req, res, next) => {
   });
 });
 
+router.post('/profile/:nickname', async (req, res, next) => {
+  let nickname = req.params.nickname;
+  if (await User.isUserInDB('', nickname)) {
+    User.find({ nickname: nickname}, function (err, docs) {
+      docs[0].set({ 
+        userName: req.body.userName,
+        website: req.body.website,
+        userBio: req.body.userBio
+      });
+      docs[0].save(function (err, userProfile) {
+        if (err) return next(err);
+        res.status(200).send({userprofile: prepareUser(userProfile)});
+      });
+    });
+  } else {
+    res.status(404).send();
+  }
+});
+
+router.post('/forgot', User.isEmailDB, (req, res, next) => {
+  const smtpTransport = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+      user: 'together0chat@gmail.com',
+      pass: 'qweasdzxc0',
+    }
+  });
+ 
+    let link = `http://127.0.0.1:8080/change?reset=${resetPasswordToken}`;
+    let mailOptions = {
+      to: req.body.email,
+      subject: 'Reset password',
+      html: `<h1>Hello,</h1><br> <h2>If you want to change your password, please <a href=${link}>click here</a> or ignore this letter.</h2>`,
+    };
+    smtpTransport.sendMail(mailOptions);
+    return res.status(200).json({text: `Reset link was sent to your email. Please check your inbox.`});
+})
+
+router.get('/change', User.isResetTikenOk, async (req, res) => {
+  return res.status(200);
+
+  res.end();
+})
+
+router.post('/change', User.isPaswordChanged, async (req, res) => {
+  
+  return res.status(200).json({text: 'Password was changed.'});
+
+  res.end();
+})
+
 module.exports = router;
