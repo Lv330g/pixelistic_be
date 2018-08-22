@@ -79,6 +79,11 @@ router.post('/login/social', User.authenticateSocial, authUser);
 router.get("/validate-token", authenticate, async (req, res, next) => {
   try {
     const user = await getUser({'_id': req.user._id});
+    if (!user.isActive) {
+      let err = new Error('User is suspended');
+      err.status = 422;
+      next(err);
+    }
     res.status(200).json({user: prepareUser(user)});
   } catch (err) {
     next(err);
