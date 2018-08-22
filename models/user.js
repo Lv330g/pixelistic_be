@@ -74,7 +74,7 @@ const getUser = async (query) => {
     populate: { path : 'author', select: 'nickname avatar'}
   })
   .populate('followingsInfo', 'favorite newMessages followingId')
-  .populate('followings', 'status nickname avatar userBio website userName -_id')
+  .populate('followings', 'status nickname avatar bio website fullName -_id')
   .populate ( {path: 'followings', populate: {
     path:'posts',
     populate: { path : 'author', select: 'nickname avatar'}
@@ -82,7 +82,7 @@ const getUser = async (query) => {
   .populate('followers', 'status socketId');
 }
 
-//'status nickname avatar posts userBio website userName -_id'
+//'status nickname avatar posts bio website fullName -_id'
 
 UserSchema.statics.authenticate = async (req, res, next) => {
   try {
@@ -92,6 +92,11 @@ UserSchema.statics.authenticate = async (req, res, next) => {
       let err = new Error(incorrect);
       err.status = 422;
       return next(err);
+    }
+    if (!user.isActive) {
+      let err = new Error('User is suspended');
+      err.status = 422;
+      next(err);
     }
     let match = await bcrypt.compare(req.body.password, user.password);
     if (match) {
@@ -120,6 +125,11 @@ UserSchema.statics.authenticateSocial = async (req, res, next) => {
     }
 
     if (currentUser) {
+      if (!currentUser.isActive) {
+        let err = new Error('User is suspended');
+        err.status = 422;
+        next(err);
+      }
       req.session.user = currentUser;
       return next();
     }
@@ -136,7 +146,11 @@ UserSchema.statics.authenticateSocial = async (req, res, next) => {
           facebookID: user.id,
         });
       }
-
+      if (!currentUser.isActive) {
+        let err = new Error('User is suspended');
+        err.status = 422;
+        next(err);
+      }
       req.session.user = currentUser;
       return next();
     }
@@ -306,7 +320,7 @@ UserSchema.statics.getProfile = async (req, res, next) => {
   try {
     req.payload = await User.findOne(
       {nickname: req.params.nickname},
-      'avatar posts nickname followings followers userBio userName website'
+      'avatar posts nickname followings followers bio fullName website'
     ).populate({ 
       path: 'posts',
       populate: { path : 'author', select: 'nickname avatar'}
