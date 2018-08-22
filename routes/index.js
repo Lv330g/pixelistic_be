@@ -132,7 +132,7 @@ router.post('/forgot', User.isEmailDB, (req, res, next) => {
     }
   });
  
-    let link = `http://127.0.0.1:8080/change?reset=${resetPasswordToken}`;
+    let link = `${host}:${port}/change?reset=${resetPasswordToken}`;
     let mailOptions = {
       to: req.body.email,
       subject: 'Reset password',
@@ -144,15 +144,10 @@ router.post('/forgot', User.isEmailDB, (req, res, next) => {
 
 router.get('/change', User.isResetTikenOk, async (req, res) => {
   return res.status(200);
-
-  res.end();
 })
 
 router.post('/change', User.isPaswordChanged, async (req, res) => {
-  
   return res.status(200).json({text: 'Password was changed.'});
-
-  res.end();
 })
 
 module.exports = router;
