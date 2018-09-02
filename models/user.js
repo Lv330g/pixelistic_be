@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const uniqueValidator = require('mongoose-unique-validator');
 const { nameReq, emailReq, emailValid, passReq, passLen, passMatch, incorrect } = require('../const/error-messages.js');
-const profileUtil = require('../utils/profile');
+
 
 const UserSchema = new mongoose.Schema({
   nickname: {
@@ -325,7 +325,14 @@ UserSchema.statics.getProfile = async (req, res, next) => {
       path: 'posts',
       populate: { path : 'author', select: 'nickname avatar'}
     });
-    next();
+      if(req.payload)
+      {
+        next();
+      } else {
+        let error = new Error('User not found.');
+        error.status = 404;
+        next(error);
+      }
   } catch (err) {
     next(err);
   }
@@ -334,16 +341,14 @@ UserSchema.statics.getProfile = async (req, res, next) => {
 UserSchema.statics.saveEditProfile = async (req, res, next) => {
   try {
     let userId = req.params.id;
-    let avatar = null;
-    profileUtil.saveAvatar(req.body.avatar, userId, (pathToAvatar) => { avatar = pathToAvatar })
     let updatedProfile = {
       fullName: req.body.fullName,
       nickname: req.body.nickname,
       website: req.body.website,
       bio: req.body.bio
     }
-    if (avatar) {
-      updatedProfile.avatar = avatar
+    if (req.body.avatar) {
+      updatedProfile.avatar = req.body.avatar
     }
 
     let userProfile = await User.findOneAndUpdate(
@@ -368,7 +373,6 @@ UserSchema.statics.saveEditProfile = async (req, res, next) => {
 UserSchema.statics.getUsersForAdmin = async (req, res, next) => {
   try {
     req.payload = await User.find({});
-    console.log(req.payload);
     next();
   } catch (err) {
     err.status = 404;
