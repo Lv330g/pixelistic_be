@@ -13,4 +13,8 @@ router.post('/:id', authenticate, profileUtil.saveAvatar, User.saveEditProfile, 
   res.status(200).json({payload: req.payload});
 });
 
+router.post('/change-password/:id', authenticate, User.changePassword, (req, res) => {
+  res.status(200).json({payload: req.payload});
+});
+
 module.exports = router;

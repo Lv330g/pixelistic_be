@@ -22,7 +22,7 @@ const saveAvatar = (req, res, next) => {
     try {
       s3.putObject(params, (err) => {
         if (err) next(err);
-        req.body.avatar = `https://${myBucket}.s3.amazonaws.com/${completePath}`;
+        req.body.avatar = completePath;
         next();
       });
     }
