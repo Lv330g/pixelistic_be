@@ -38,7 +38,7 @@ const confirmEmail = user => {
     };
     HashForEmail.create(newUser);
 
-    //Delete the cache after 5 minutes of ignoring
+    //Delete the hash after 5 minutes
     setTimeout(() => {
       HashForEmail.findOne({ hash: hash }, (err, hashForEmail) => {
         hashForEmail.remove();
@@ -107,9 +107,8 @@ router.get("/verify", (req, res, next) => {
         email: hashForEmail.email,
         password: hashForEmail.password,
       };
-      //Add user and delete hash
+      //Add user
       User.create(newUser);
-      hashForEmail.remove();
       res.redirect("/sign-in");
     } catch (err) {
       err.status = 422;
