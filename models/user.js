@@ -20,15 +20,15 @@ const UserSchema = new mongoose.Schema({
     unique: true,
     required: true,
   },
-  resetPasswordToken:{
+  resetPasswordToken: {
     type: String,
     default: false
   },
-  resetPasswordExpires:{
+  resetPasswordExpires: {
     type: String,
     default: false
-  },  
-  isAdmin:{
+  },
+  isAdmin: {
     type: Boolean,
     default: false
   },
@@ -69,17 +69,19 @@ UserSchema.plugin(uniqueValidator, { message: 'This {PATH} already used' });
 
 const getUser = async (query) => {
   return await User.findOne(query)
-  .populate({ 
-    path: 'posts',
-    populate: { path : 'author', select: 'nickname avatar'}
-  })
-  .populate('followingsInfo', 'favorite newMessages followingId')
-  .populate('followings', 'status nickname avatar bio website fullName -_id')
-  .populate ( {path: 'followings', populate: {
-    path:'posts',
-    populate: { path : 'author', select: 'nickname avatar'}
-  }})
-  .populate('followers', 'status socketId');
+    .populate({
+      path: 'posts',
+      populate: { path: 'author', select: 'nickname avatar' }
+    })
+    .populate('followingsInfo', 'favorite newMessages followingId')
+    .populate('followings', 'status nickname avatar bio website fullName -_id')
+    .populate({
+      path: 'followings', populate: {
+        path: 'posts',
+        populate: { path: 'author', select: 'nickname avatar' }
+      }
+    })
+    .populate('followers', 'status socketId');
 }
 
 //'status nickname avatar posts bio website fullName -_id'
@@ -195,8 +197,8 @@ UserSchema.statics.isEmailDB = async (req, res, next) => {
         token = hash;
         resetPasswordToken = token;
         resetPasswordExpires = Date.now() + 3600000; // 1 hour
-        result.update( {resetPasswordToken:resetPasswordToken}).exec();
-        result.update( {resetPasswordExpires:resetPasswordExpires}).exec();
+        result.update({ resetPasswordToken: resetPasswordToken }).exec();
+        result.update({ resetPasswordExpires: resetPasswordExpires }).exec();
 
         return next();
       }
@@ -209,40 +211,40 @@ UserSchema.statics.isEmailDB = async (req, res, next) => {
 }
 
 UserSchema.statics.isResetTikenOk = (req, res, next) => {
-  User.findOne({ resetPasswordToken: req.query.reset, resetPasswordExpires: { $gt: Date.now() } }, function(err, user) {
+  User.findOne({ resetPasswordToken: req.query.reset, resetPasswordExpires: { $gt: Date.now() } }, function (err, user) {
     if (user === null) {
-    const err = new Error('Token incorect or expire');
-    err.status = 422;
-    return next(err);
+      const err = new Error('Token incorect or expire');
+      err.status = 422;
+      return next(err);
     } else {
       return next();
-    } 
+    }
   });
 }
 
 UserSchema.statics.isPaswordChanged = (req, res, next) => {
   let token = req.body.resetToken.substring(7, req.body.resetToken.length)
-  if(req.body.password === req.body.passwordConf){
-    User.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: Date.now() } }, function(err, result) {
+  if (req.body.password === req.body.passwordConf) {
+    User.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: Date.now() } }, function (err, result) {
       if (result === null) {
-      const err = new Error('Token incorrect or expore!');
-      err.status = 422;
-      return next(err);
+        const err = new Error('Token incorrect or expore!');
+        err.status = 422;
+        return next(err);
       } else {
-          bcrypt.hash(req.body.password, 10, (err, hash) => {
-            if (err) {
-              return next(err);
-            } else {
-              result.update( {password:hash}).exec();
-              return next();
-            }
-          })
-      } 
+        bcrypt.hash(req.body.password, 10, (err, hash) => {
+          if (err) {
+            return next(err);
+          } else {
+            result.update({ password: hash }).exec();
+            return next();
+          }
+        })
+      }
     });
-  }else{
+  } else {
     const err = new Error(passMatch);
-      err.status = 422;
-      return next(err);
+    err.status = 422;
+    return next(err);
   }
 }
 
@@ -286,12 +288,12 @@ UserSchema.pre('save', function (next) {
 UserSchema.statics.follow = async (req, res, next) => {
   try {
     await User.findOneAndUpdate(
-      {'_id': req.body.current},
-      {$push: {'followingsInfo': req.payload.followingInfoId, 'followings': req.body.following}},
+      { '_id': req.body.current },
+      { $push: { 'followingsInfo': req.payload.followingInfoId, 'followings': req.body.following } },
     );
     await User.findOneAndUpdate(
-      {'_id': req.body.following},
-      {$push: {'followers': req.body.current}},
+      { '_id': req.body.following },
+      { $push: { 'followers': req.body.current } },
     );
     next();
   } catch (err) {
@@ -302,12 +304,12 @@ UserSchema.statics.follow = async (req, res, next) => {
 UserSchema.statics.unfollow = async (req, res, next) => {
   try {
     await User.findOneAndUpdate(
-      {'_id': req.body.current},
-      {$pull: {'followingsInfo': req.body.followingInfoId, 'followings': req.body.followingId}}
+      { '_id': req.body.current },
+      { $pull: { 'followingsInfo': req.body.followingInfoId, 'followings': req.body.followingId } }
     );
     await User.findOneAndUpdate(
-      {'_id': req.body.followingId},
-      {$pull: {'followers': req.body.current}}
+      { '_id': req.body.followingId },
+      { $pull: { 'followers': req.body.current } }
     );
     next();
   } catch (err) {
@@ -319,20 +321,19 @@ UserSchema.statics.unfollow = async (req, res, next) => {
 UserSchema.statics.getProfile = async (req, res, next) => {
   try {
     req.payload = await User.findOne(
-      {nickname: req.params.nickname},
+      { nickname: req.params.nickname },
       'avatar posts nickname followings followers bio fullName website'
-    ).populate({ 
+    ).populate({
       path: 'posts',
-      populate: { path : 'author', select: 'nickname avatar'}
+      populate: { path: 'author', select: 'nickname avatar' }
     });
-      if(req.payload)
-      {
-        next();
-      } else {
-        let error = new Error('User not found.');
-        error.status = 404;
-        next(error);
-      }
+    if (req.payload) {
+      next();
+    } else {
+      let error = new Error('User not found.');
+      error.status = 404;
+      next(error);
+    }
   } catch (err) {
     next(err);
   }
@@ -369,6 +370,40 @@ UserSchema.statics.saveEditProfile = async (req, res, next) => {
   };
 };
 
+UserSchema.statics.changePassword = async (req, res, next) => {
+  try {
+    let user = await User.findOne({ _id: req.params.id })
+    let match = await bcrypt.compare(req.body.oldPassword, user.password);
+    if (match) {
+      if (req.body.newPassword === req.body.newPasswordConf) {
+        await bcrypt.hash(req.body.newPassword, 10, async (err, hash) => {
+          if (err) {
+            return next(err);
+          } else {
+            await User.findOneAndUpdate(
+              { _id: req.params.id },
+              { $set: { password: hash } }
+            );
+            req.payload = 'Password successfuly changed';
+            return next();
+          }
+        })
+
+      } else {
+        const err = new Error(passMatch);
+        err.status = 400;
+        return next(err);
+      }
+    } else {
+      let err = new Error('Password incorrect');
+      err.status = 400;
+      return next(err);
+    }
+  } catch (err) {
+    next(err);
+  };
+};
+
 //dashboard
 UserSchema.statics.getUsersForAdmin = async (req, res, next) => {
   try {
@@ -381,7 +416,7 @@ UserSchema.statics.getUsersForAdmin = async (req, res, next) => {
 };
 
 UserSchema.statics.updateStatus = async (req, res, next) => {
-  const newUser = await User.findByIdAndUpdate(req.body.id, { $set:{'isActive': req.body.status }},{ new: true});
+  const newUser = await User.findByIdAndUpdate(req.body.id, { $set: { 'isActive': req.body.status } }, { new: true });
   req.status = newUser.isActive;
   next();
 };
