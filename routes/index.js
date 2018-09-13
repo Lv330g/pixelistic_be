@@ -9,8 +9,8 @@ const HashForEmail = require("../models/hashForEmail");
 const { User, getUser } = require('../models/user');
 const { host, port } = require('../const/node-config');
 
-const prepareUser = ({_id, nickname, email, posts, isAdmin, avatar, fullName, website, bio, followings, followingsInfo, followers}) => {
-  return {_id, nickname, email, isAdmin, posts, avatar, fullName, website, bio, followings, followingsInfo, followers};
+const prepareUser = ({_id, nickname, email, posts, isAdmin, avatar, disabled, fullName, website, bio, followings, followingsInfo, followers}) => {
+  return {_id, nickname, email, isAdmin, posts, avatar, disabled, fullName, website, bio, followings, followingsInfo, followers};
 };
 
 /**

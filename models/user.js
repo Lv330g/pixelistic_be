@@ -56,6 +56,10 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  disabled: {
+    type: Boolean,
+    default: false
+  },
   followingsInfo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'FollowingInfo' }],
   followings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -93,8 +97,8 @@ UserSchema.statics.authenticate = async (req, res, next) => {
       err.status = 422;
       return next(err);
     }
-    if (!user.isActive) {
-      let err = new Error('User is suspended');
+    if (!user.isActive && !user.disabled) {
+      let err = new Error('Your account is currently suspended');
       err.status = 422;
       next(err);
     }
@@ -125,8 +129,8 @@ UserSchema.statics.authenticateSocial = async (req, res, next) => {
     }
 
     if (currentUser) {
-      if (!currentUser.isActive) {
-        let err = new Error('User is suspended');
+      if (!currentUser.isActive && !user.disabled) {
+        let err = new Error('Your account is currently suspended');
         err.status = 422;
         next(err);
       }
@@ -146,8 +150,8 @@ UserSchema.statics.authenticateSocial = async (req, res, next) => {
           facebookID: user.id,
         });
       }
-      if (!currentUser.isActive) {
-        let err = new Error('User is suspended');
+      if (!currentUser.isActive && !user.disabled) {
+        let err = new Error('Your account is currently suspended');
         err.status = 422;
         next(err);
       }
@@ -416,6 +420,12 @@ UserSchema.statics.getUsersForAdmin = async (req, res, next) => {
 UserSchema.statics.updateStatus = async (req, res, next) => {
   const newUser = await User.findByIdAndUpdate(req.body.id, { $set: { 'isActive': req.body.status } }, { new: true });
   req.status = newUser.isActive;
+  next();
+};
+
+UserSchema.statics.disableUser = async (req, res, next) => {
+  await User.update({ '_id': { '$in': req.body.IDs } }, { $set: { 'disabled': true,  'isActive': false }} ,{ new: true });
+  req.payload = await User.find({});
   next();
 };
 
