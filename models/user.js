@@ -69,22 +69,20 @@ UserSchema.plugin(uniqueValidator, { message: 'This {PATH} already used' });
 
 const getUser = async (query) => {
   return await User.findOne(query)
-    .populate({
-      path: 'posts',
-      populate: { path: 'author', select: 'nickname avatar' }
-    })
-    .populate('followingsInfo', 'favorite newMessages followingId')
-    .populate('followings', 'status nickname avatar bio website fullName -_id')
-    .populate({
-      path: 'followings', populate: {
-        path: 'posts',
-        populate: { path: 'author', select: 'nickname avatar' }
-      }
-    })
-    .populate('followers', 'status socketId');
+  .populate({ 
+    path: 'posts',
+    populate: { path : 'author', select: 'nickname avatar'}
+  })
+  .populate('followingsInfo', 'favorite newMessages followingId')
+  .populate('followings', 'followers status nickname avatar bio website fullName -_id')
+  .populate ({
+    path: 'followings', populate: {
+      path:'posts',
+      populate: { path : 'author', select: 'nickname avatar'}
+    }
+  })
+  .populate('followers', 'status socketId');
 }
-
-//'status nickname avatar posts bio website fullName -_id'
 
 UserSchema.statics.authenticate = async (req, res, next) => {
   try {
