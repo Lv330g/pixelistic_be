@@ -22,6 +22,10 @@ const PostSchema = new mongoose.Schema({
     author: {
       type: String,
       required: true
+    },
+    authorAvatar: {
+      type: String,
+      required: true
     }
   } ],
   geolocation: String,
@@ -77,7 +81,8 @@ PostSchema.statics.removeLike = async (req, res, next) => {
 PostSchema.statics.addComment = async (req, res, next) => {
   const comment = {
     comment: req.body.comment,
-    author: req.body.userNickname
+    author: req.body.userNickname,
+    authorAvatar: req.body.userAvatar
   }
 
   try{

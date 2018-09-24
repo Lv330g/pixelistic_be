@@ -13,7 +13,7 @@ const UserSchema = new mongoose.Schema({
   },
   avatar: {
     type: String,
-    default: 'https://cdn4.iconfinder.com/data/icons/evil-icons-user-interface/64/avatar-512.png'
+    default: 'avatar/5ba68dab2c08b924204ee715/1537725117556.png'
   },
   email: {
     type: String,
